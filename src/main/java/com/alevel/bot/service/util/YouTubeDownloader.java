@@ -7,29 +7,23 @@ import com.alevel.bot.model.dto.ResponseContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.io.InputStream;
 
-@Service()
+@Service
 public class YouTubeDownloader {
 
     private final Logger logger = LoggerFactory.getLogger(YouTubeDownloader.class);
 
     private final static String YOUTUBE_VIDEO_URL = "https://www.youtube.com/watch?v=%s";
-
-    private final static String mp3Format = ".mp3 ";
-
-    private final static String mp4Format = ".mp4 ";
+    private final static String STANDARD_DL_COMMAND_WITH_FORMAT_OPTIONS = "youtube-dl -f %s ";
+    private final static String STANDARD_DL_PATH_OPTION =" -o %s/%s.%s ";
 
     private final static String TERMINAL = "cmd.exe";
+    private final static String END_COMMAND = "/c";
 
     private Process process;
-
-    private StreamProcessExtractorService stdOutProcessor;
-
-    private InputStream outStream;
 
     private final FolderManagerService folderManagerService;
 
@@ -40,47 +34,22 @@ public class YouTubeDownloader {
     }
 
     public void download(Request request) throws YoutubeBotExceptions {
-
-        StringBuffer outBuffer = new StringBuffer();
+        String[] commands = new String[3];
         int exitCode;
-        boolean isAudio = false;
-        String currentFormat = mp4Format;
-
         try {
-
-            if (request.getFormat().equals(ResponseContentType.mp3)) {
-                isAudio = true;
-                currentFormat = mp3Format;
-            }
-
             ProcessBuilder builder = new ProcessBuilder();
             logger.info("Start executing command to cmd.exe ");
-
-
-            if (isAudio) {
-                builder.command(TERMINAL, "/c",
-                         "youtube-dl -f bestaudio " +
-                                " -o " + folderManagerService.getPath()+ "/" + request.getVideoId() + currentFormat
-                                + String.format(YOUTUBE_VIDEO_URL, request.getVideoId()));
-            } else {
-                builder.command(TERMINAL, "/c",
-                        "youtube-dl -f " + request.getQualityCode() +
-                                " -o " + folderManagerService.getPath()+ "/"+ request.getVideoId() + currentFormat
-                                + String.format(YOUTUBE_VIDEO_URL, request.getVideoId()));
-            }
-
+            commands[0] = TERMINAL;
+            commands[1] = END_COMMAND;
+            commands[2] = buildCommand(request);
+            builder.command(commands);
             builder.redirectErrorStream(true);
 
             process = builder.start();
 
             logger.info("Run process: " + process.info());
 
-            outStream = process.getInputStream();
-
-            stdOutProcessor = new StreamProcessExtractorService(outBuffer, outStream);
-
             try {
-                stdOutProcessor.join();
                 exitCode = process.waitFor();
             } catch (InterruptedException e) {
                 logger.error("Error in process: " + process.info(), e);
@@ -98,13 +67,21 @@ public class YouTubeDownloader {
         }
     }
 
+    // IN PROGRESS
     public void stopDownloading() {
-        stdOutProcessor.stopStream();
-        try {
-            outStream.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         process.destroy();
+    }
+
+    private String buildCommand(Request request){
+        String finalFormat;
+        if(request.getFormat().equals(ResponseContentType.mp3)) {
+            finalFormat = String.format(STANDARD_DL_COMMAND_WITH_FORMAT_OPTIONS, "bestaudio");
+        }else {
+            finalFormat = String.format(STANDARD_DL_COMMAND_WITH_FORMAT_OPTIONS, request.getQualityCode());
+        }
+        return finalFormat +
+                String.format(STANDARD_DL_PATH_OPTION,
+                        folderManagerService.getPath(), request.getVideoId(), request.getFormat().name())
+                + String.format(YOUTUBE_VIDEO_URL, request.getVideoId());
     }
 }

@@ -13,16 +13,9 @@ public interface UserRepository extends JpaRepository<BotUser, Long> {
 
     Optional<BotUser> findBotUserByChatId(Long chatId);
 
-
     @Query("update BotUser u set u.botState = :state where u.chatId = :chatId")
     @Modifying
     void changeBotStateByChatId(Long chatId, TelegramBotState state);
 
-
     Optional<BotUser> findBotUserById(Long id);
-
-
-    @Query("from BotUser")
-    @Modifying
-    List<BotUser> findAll();
 }

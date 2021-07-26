@@ -36,6 +36,11 @@ import java.util.Optional;
 @Setter
 public class YoutubeTelegramBot extends TelegramWebhookBot {
 
+    private final static double MAX_UPLOADED_FILE_SIZE = 50;
+    private final static int MP4_360_QUALITY_CODE = 18;
+    private final static int MP4_720_QUALITY_CODE = 22;
+    private final static int NONE_QUALITY_CODE = 0;
+
     private Logger logger = LoggerFactory.getLogger(YoutubeTelegramBot.class);
 
     private String botPath;
@@ -69,7 +74,6 @@ public class YoutubeTelegramBot extends TelegramWebhookBot {
     public YoutubeTelegramBot(DefaultBotOptions botOptions) {
         super(botOptions);
     }
-
 
     @Override
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
@@ -155,7 +159,7 @@ public class YoutubeTelegramBot extends TelegramWebhookBot {
             case "mp3": {
                 userRequest.setFormat(ResponseContentType.mp3);
                 storage.updateRequest(chatId, userRequest);
-                sendFileInFormat(chatId, 0, userRequest);
+                sendFileInFormat(chatId, NONE_QUALITY_CODE, userRequest);
                 break;
             }
             case "mp4": {
@@ -169,12 +173,12 @@ public class YoutubeTelegramBot extends TelegramWebhookBot {
             }
             case "360p": {
                 logger.info("Callback 360p from chatId: " + chatId);
-                sendFileInFormat(chatId, 18, userRequest);
+                sendFileInFormat(chatId, MP4_360_QUALITY_CODE, userRequest);
                 break;
             }
             case "720p": {
                 logger.info("Callback 720p from chatId: " + chatId);
-                sendFileInFormat(chatId, 22, userRequest);
+                sendFileInFormat(chatId, MP4_720_QUALITY_CODE, userRequest);
                 break;
             }
         }
@@ -200,7 +204,7 @@ public class YoutubeTelegramBot extends TelegramWebhookBot {
 
                 logger.info("Begin loading file with id: " + userRequest.getVideoId() + " format: " + userRequest.getFormat() + " quality: " + userRequest.getQualityCode());
 
-                if (mediaCleanerService.getFileSize(userRequest) >= 50) {
+                if (mediaCleanerService.getFileSize(userRequest) >= MAX_UPLOADED_FILE_SIZE) {
                     execute(messageService.getReplyMessage(chatId, "response.fileIsTooBig"));
                     mediaCleanerService.clean(userRequest, true);
                     throw new YoutubeBotExceptions();

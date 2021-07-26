@@ -32,6 +32,7 @@ public class DownloadedMediaCleanerService {
     }
     public double getFileSize(Request request) {
         File file = new File(folderManagerService.getPath() + "\\" + request.getFullName());
-        return file.length() / 1024 / 1024;
+        double size = (double) file.length();
+        return size / 1024 / 1024;
     }
 }
